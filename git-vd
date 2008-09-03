@@ -1,0 +1,64 @@
+#!/usr/bin/python2.4
+
+import os, shutil, tempfile
+
+def grab_revision(dir, rev, path):
+  if rev == "":
+    shutil.copyfile(path, dir + "/" + path)
+  else:
+    os.system('git cat-file blob %s:%s > %s/%s' % (rev, path, dir, path))
+
+class DirDiff:
+  def __init__(self, left_rev, right_rev):
+    """"empty rev means working"""
+    self.left_rev = left_rev
+    self.right_rev = right_rev
+
+  def prepare_dirs(self):
+    self.left_dir = tempfile.mkdtemp()
+    self.right_dir = tempfile.mkdtemp()
+    diff_index_cmd = 'git diff-index -z --diff-filter=[ADM] --no-renames HEAD'
+    diff = os.popen(diff_index_cmd).read()
+    entries = diff.split("\0")
+    i = 0
+    while i < len(entries) - 1:
+      status, path = entries[i], entries[i+1]
+      i += 2
+      mode = status[97]
+      if mode == 'D':
+        self.process_deleted(path)
+      elif mode == 'A':
+        self.process_added(path)
+      elif mode == 'M':
+        self.process_modified(path)
+
+  def delete_dirs(self):
+    shutil.rmtree(self.left_dir)
+    shutil.rmtree(self.right_dir)
+
+  def _grab_left_version(self, path):
+    grab_revision(self.left_dir, self.left_rev, path)
+
+  def _grab_right_version(self, path):
+    grab_revision(self.right_dir, self.right_rev, path)
+
+  def process_deleted(self, path):
+    self._grab_left_version(path)
+
+  def process_added(self, path):
+    self._grab_right_version(path)
+
+  def process_modified(self, path):
+    self._grab_right_version(path)
+    self._grab_left_version(path)
+
+  def kdiff3(self):
+    try:
+      self.prepare_dirs()
+      print self.left_dir, self.right_dir
+      os.system('kdiff3 %s %s' % (self.left_dir, self.right_dir))
+    finally:
+      self.delete_dirs()
+
+if __name__ == "__main__":
+  DirDiff("HEAD", "").kdiff3()
