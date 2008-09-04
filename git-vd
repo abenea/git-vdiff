@@ -1,16 +1,29 @@
 #!/usr/bin/python2.4
 
-import os, shutil, tempfile
+import os
+import os.path
+import shutil
+import tempfile
 
-def grab_revision(dir, rev, path):
-  if rev == "":
-    shutil.copyfile(path, dir + "/" + path)
+
+def exec_stdout(cmd):
+  return os.popen(cmd).read()
+
+
+def grab_revision(repo_topdir, git_path, rev, dest_topdir):
+  dest_path = os.path.join(dest_topdir, git_path)
+  os.makedirs(os.path.dirname(dest_path))
+  if rev == '':
+    src_path = os.path.join(repo_topdir, git_path)
+    shutil.copyfile(src_path, dest_path)
   else:
-    os.system('git cat-file blob %s:%s > %s/%s' % (rev, path, dir, path))
+    os.system('git cat-file blob %s:%s > %s' % (rev, git_path, dest_path))
+
 
 class DirDiff:
   def __init__(self, left_rev, right_rev):
-    """"empty rev means working"""
+    """"empty rev means work tree"""
+    self.repo_topdir = exec_stdout('git rev-parse --show-cdup').rstrip("\n")
     self.left_rev = left_rev
     self.right_rev = right_rev
 
@@ -18,7 +31,7 @@ class DirDiff:
     self.left_dir = tempfile.mkdtemp()
     self.right_dir = tempfile.mkdtemp()
     diff_index_cmd = 'git diff-index -z --diff-filter=[ADM] --no-renames HEAD'
-    diff = os.popen(diff_index_cmd).read()
+    diff = exec_stdout(diff_index_cmd)
     entries = diff.split("\0")
     i = 0
     while i < len(entries) - 1:
@@ -37,10 +50,10 @@ class DirDiff:
     shutil.rmtree(self.right_dir)
 
   def _grab_left_version(self, path):
-    grab_revision(self.left_dir, self.left_rev, path)
+    grab_revision(self.repo_topdir, path, self.left_rev, self.left_dir)
 
   def _grab_right_version(self, path):
-    grab_revision(self.right_dir, self.right_rev, path)
+    grab_revision(self.repo_topdir, path, self.right_rev, self.right_dir)
 
   def process_deleted(self, path):
     self._grab_left_version(path)
@@ -61,4 +74,7 @@ class DirDiff:
       self.delete_dirs()
 
 if __name__ == "__main__":
-  DirDiff("HEAD", "").kdiff3()
+  if exec_stdout('git rev-parse --is-inside-work-tree').rstrip("\n") != "true":
+    print "Not inside a work tree."
+  else:
+    DirDiff("HEAD", "").kdiff3()
