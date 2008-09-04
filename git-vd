@@ -12,7 +12,9 @@ def exec_stdout(cmd):
 
 def grab_revision(repo_topdir, git_path, rev, dest_topdir):
   dest_path = os.path.join(dest_topdir, git_path)
-  os.makedirs(os.path.dirname(dest_path))
+  dest_dirname = os.path.dirname(dest_path)
+  if not os.path.exists(dest_dirname):
+    os.makedirs(dest_dirname)
   if rev == '':
     src_path = os.path.join(repo_topdir, git_path)
     shutil.copyfile(src_path, dest_path)
