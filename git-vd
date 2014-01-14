@@ -32,9 +32,9 @@ class DirDiff:
     self.left_dir = tempfile.mkdtemp()
     self.right_dir = tempfile.mkdtemp()
     if not self.right_rev:
-      diff_cmd = 'git diff-index -z --diff-filter=[ADM] --no-renames ' + self.left_rev
+      diff_cmd = 'git diff-index -z --diff-filter=ADM --no-renames ' + self.left_rev
     else:
-      diff_cmd = 'git diff-tree -z -r --diff-filter=[ADM] --no-renames %s %s' % (self.left_rev, self.right_rev)
+      diff_cmd = 'git diff-tree -z -r --diff-filter=ADM --no-renames %s %s' % (self.left_rev, self.right_rev)
     diff = exec_stdout(diff_cmd)
     entries = diff.split("\0")
     i = 0
