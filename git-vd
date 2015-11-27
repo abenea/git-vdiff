@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import subprocess
 import os.path
 import shutil
 import sys
@@ -18,7 +19,8 @@ def grab_revision(repo_topdir, git_path, rev, dest_topdir):
     src_path = os.path.join(repo_topdir, git_path)
     shutil.copyfile(src_path, dest_path)
   else:
-    os.system('git cat-file blob %s:%s > %s' % (rev, git_path, dest_path))
+    with open(dest_path, 'w') as f:
+      subprocess.call(['git', 'cat-file', 'blob', rev + ':' + git_path], stdout=f)
 
 
 class DirDiff:
